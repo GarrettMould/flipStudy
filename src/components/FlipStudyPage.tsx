@@ -14,6 +14,7 @@ interface FlipCardQuestion {
   type: 'mcq' | 'frq';
   front: string;
   back: string | MCQBack;
+  sampleAnswer?: string;
 }
 
 interface VideoUnit {
@@ -26,11 +27,12 @@ interface VideoUnit {
 // FlipCard Component Props
 // interface FlipCardComponentProps extends FlipCardQuestion {} // Remove this interface
 
-const FlipCard: React.FC<FlipCardQuestion> = ({ front, back, type }) => { // Use FlipCardQuestion directly
+const FlipCard: React.FC<FlipCardQuestion> = ({ front, back, type, sampleAnswer }) => {
   const [isFlipped, setIsFlipped] = useState(false);
   const [frqAnswer, setFrqAnswer] = useState('');
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [showExplanation, setShowExplanation] = useState(false);
+  const [showFrqAnswer, setShowFrqAnswer] = useState(false);
 
   const handleOptionClick = (index: number) => {
     setSelectedAnswer(index);
@@ -65,17 +67,32 @@ const FlipCard: React.FC<FlipCardQuestion> = ({ front, back, type }) => { // Use
                     // Show selected answer or correct answer
                     return index === selectedAnswer || index === (back as MCQBack).correctAnswerIndex;
                   })
-                  .map((option) => { // Remove unused _index parameter
-                    // Need to get original index if filtering is applied
-                    const originalIndex = (back as MCQBack).options.indexOf(option);
+                  .map((option) => {
+                    const mcqData = back as MCQBack; // Type assertion for clarity
+                    const originalIndex = mcqData.options.indexOf(option);
+
+                    let currentBorderClasses = 'border-gray-200';
+                    if (showExplanation) {
+                      const isCorrectOption = originalIndex === mcqData.correctAnswerIndex;
+                      const isSelectedOption = originalIndex === selectedAnswer;
+
+                      if (isSelectedOption) {
+                        currentBorderClasses = isCorrectOption 
+                          ? 'border-green-500 ring-2 ring-green-200' 
+                          : 'border-red-500 ring-2 ring-red-200';
+                      } else if (isCorrectOption) { 
+                        currentBorderClasses = 'border-green-500 ring-2 ring-green-200';
+                      }
+                    }
+
                     return (
                       <div
                         key={originalIndex}
                         className={`w-full p-2.5 bg-white rounded-md border 
-                                    ${selectedAnswer === originalIndex ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-200'} 
-                                    hover:bg-gray-100 hover:border-gray-300 
-                                    ${showExplanation && !(originalIndex === selectedAnswer || originalIndex === (back as MCQBack).correctAnswerIndex) ? 'hidden' : ''}
-                                    cursor-pointer transition-all duration-300 text-left text-sm text-gray-700`}
+                                    ${currentBorderClasses} 
+                                    ${!showExplanation ? 'hover:bg-gray-100 hover:border-gray-300 cursor-pointer' : 'cursor-default'} 
+                                    ${showExplanation && !(originalIndex === selectedAnswer || originalIndex === mcqData.correctAnswerIndex) ? 'hidden' : ''}
+                                    transition-all duration-300 text-left text-sm text-gray-700`}
                         onClick={(e) => {
                           e.stopPropagation();
                           if (!showExplanation) { // only allow selection if explanation not shown
@@ -98,22 +115,40 @@ const FlipCard: React.FC<FlipCardQuestion> = ({ front, back, type }) => { // Use
           {type === 'frq' && typeof back === 'string' && (
             <div className="w-full h-full flex flex-col justify-center items-center">
               <p className="text-gray-700 whitespace-pre-line text-sm text-center mb-4">{back}</p>
-              <textarea
-                className="w-full h-24 p-2 border border-gray-300 rounded-md text-sm text-gray-700 resize-none"
-                placeholder="Type your answer here..."
-                value={frqAnswer}
-                onChange={(e) => {
-                  e.stopPropagation();
-                  setFrqAnswer(e.target.value);
-                }}
-                onClick={(e) => e.stopPropagation()}
-              />
-              <button
-                className="w-full mt-3 p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors duration-150 text-sm"
-                onClick={(e) => e.stopPropagation()}
-              >
-                Check Answer
-              </button>
+              {!showFrqAnswer ? (
+                <>
+                  <textarea
+                    className="w-full h-24 p-2 border border-gray-300 rounded-md text-sm text-gray-700 resize-none"
+                    placeholder="Type your answer here..."
+                    value={frqAnswer}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      setFrqAnswer(e.target.value);
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  <button
+                    className="w-full mt-3 p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors duration-150 text-sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowFrqAnswer(true);
+                    }}
+                  >
+                    Check Answer
+                  </button>
+                </>
+              ) : (
+                <div className="w-full text-left">
+                  {frqAnswer && (
+                     <div className="mt-2 mb-4 p-3 bg-blue-50 rounded-md border border-blue-200 w-full">
+                        <p className="text-sm text-gray-700 whitespace-pre-line"><strong>Your Answer:</strong> {frqAnswer}</p>
+                     </div>
+                  )}
+                  <div className="mt-4 p-3 bg-gray-50 rounded-md border border-gray-200 w-full">
+                    <p className="text-sm text-gray-700 whitespace-pre-line"><strong>Sample Answer:</strong> { sampleAnswer ? sampleAnswer : 'Sample answer not available.' }</p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -147,13 +182,15 @@ const videoUnitsData: VideoUnit[] = [
         type: 'frq',
         front:
           'If our marginal cost is less than our ATC, what\'s going to happen if we produce one more? Our average total cost is going to get pulled down.',
-        back: 'Suppose a firm is currently producing 10 units with an ATC of $8 and a marginal cost of $6 for the 11th unit.\na. Will the average total cost increase or decrease if the firm produces the 11th unit? Explain.'
+        back: 'Suppose a firm is currently producing 10 units with an ATC of $8 and a marginal cost of $6 for the 11th unit.\na. Will the average total cost increase or decrease if the firm produces the 11th unit? Explain.',
+        sampleAnswer: 'a. The average total cost will decrease. This is because the marginal cost of producing the 11th unit ($6) is less than the average total cost of producing the first 10 units ($8). When the cost of an additional unit is less than the current average, it pulls the average down.'
       },
       {
         type: 'frq',
         front:
           'Let\'s say that Steph Curry is averaging right now 30 points per game. Then he scores 15. What happens to his average?',
-        back: 'Use the analogy to explain what happens to average total cost when a firm\'s marginal cost is below its current average.\nInclude a specific numerical example similar to the Steph Curry case.'
+        back: 'Use the analogy to explain what happens to average total cost when a firm\'s marginal cost is below its current average.\nInclude a specific numerical example similar to the Steph Curry case.',
+        sampleAnswer: 'When a firm\'s marginal cost is below its current average total cost, producing an additional unit will pull the average total cost down. This is analogous to Steph Curry\'s scoring average. If his average is 30 points per game and he scores 15 points in the next game (his marginal score), his overall average will decrease.\n\nNumerical Example: Suppose a firm produces 5 units with an ATC of $20. The marginal cost of the 6th unit is $14. Since $14 (MC) < $20 (ATC), the ATC will fall when the 6th unit is produced.'
       },
       {
         type: 'mcq',
@@ -168,7 +205,7 @@ const videoUnitsData: VideoUnit[] = [
             'D) It equals marginal cost'
           ],
           correctAnswerIndex: 2,
-          explanation: 'Placeholder: Explanation for why C is correct.'
+          explanation: "If the cost of producing one more unit (marginal cost) is higher than the current average cost of all units produced so far (average total cost), then producing that additional unit will pull the average total cost upwards. For a non-economics example, if a student's average test score is 85, and their score on the next (marginal) test is 95, their overall average will increase."
         }
       }
     ]
@@ -219,6 +256,7 @@ const FlipStudyPage: React.FC = () => {
             type={question.type} 
             front={question.front} 
             back={question.back} 
+            sampleAnswer={question.sampleAnswer}
           />
         ))}
       </div>
