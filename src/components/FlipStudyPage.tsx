@@ -65,7 +65,7 @@ const FlipCard: React.FC<FlipCardQuestion> = ({ front, back, type }) => { // Use
                     // Show selected answer or correct answer
                     return index === selectedAnswer || index === (back as MCQBack).correctAnswerIndex;
                   })
-                  .map((option, _index) => { // Rename unused index to _index
+                  .map((option) => { // Remove unused _index parameter
                     // Need to get original index if filtering is applied
                     const originalIndex = (back as MCQBack).options.indexOf(option);
                     return (
