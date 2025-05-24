@@ -24,9 +24,9 @@ interface VideoUnit {
 }
 
 // FlipCard Component Props
-interface FlipCardComponentProps extends FlipCardQuestion {}
+// interface FlipCardComponentProps extends FlipCardQuestion {} // Remove this interface
 
-const FlipCard: React.FC<FlipCardComponentProps> = ({ front, back, type }) => {
+const FlipCard: React.FC<FlipCardQuestion> = ({ front, back, type }) => { // Use FlipCardQuestion directly
   const [isFlipped, setIsFlipped] = useState(false);
   const [frqAnswer, setFrqAnswer] = useState('');
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
@@ -65,7 +65,7 @@ const FlipCard: React.FC<FlipCardComponentProps> = ({ front, back, type }) => {
                     // Show selected answer or correct answer
                     return index === selectedAnswer || index === (back as MCQBack).correctAnswerIndex;
                   })
-                  .map((option, index) => {
+                  .map((option, _index) => { // Rename unused index to _index
                     // Need to get original index if filtering is applied
                     const originalIndex = (back as MCQBack).options.indexOf(option);
                     return (
